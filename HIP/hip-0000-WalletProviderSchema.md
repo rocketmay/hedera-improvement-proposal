@@ -1,5 +1,5 @@
 - hip: XX
-- title: Hedera Web Extension Transaction Protocol
+- title: Wallet Provider Schema
 - author: [rocketmay](https://github.com/rocketmay), [0xJepsen](https://github.com/0xJepsen)
 - type: Standards Track
 - category: Application
@@ -36,7 +36,7 @@ Without a communication standard, projects in the space are required to reinvent
 
 ## Rationale
 
-We propose establishing a standard protocol for web applications (the requesting entity) to identify web extensions (the receiving entity) installed on the user's computer that implement the WPS. Once the app is identified, an RPC can be sent to the client application with transaction data to be processed (signed, returned and/or executed). There is no sensitive account information within the transaction data. 
+We propose establishing a standard protocol for web applications (the requesting entity) to identify web extensions (the receiving entity) installed on the user's computer that implement the WPS. Once the app is identified, message can be sent to the client application with transaction data to be processed (signed, returned and/or executed). There is no sensitive account information within the transaction data. 
 
 The receiving entity recieves the transaction data and displays the request to the user. The user then approves or rejects the request, which the receiving entity processes. For example, in the case of a 'Sign' message, after approval the receiving entity signs it using their private key without exposing the key to the requesting entity. Per the specification of the 'Sign' message, the signed transaction is then returned to the requesting entity. 
 
@@ -52,17 +52,16 @@ This is the generalized flow:
 _Start of Protocol Scope_
 
 Client Query Protocol
-1. The requesting entity queries the browser for extensions which implement the WET Protocol
+1. The requesting entity queries the browser for extensions which implement the WPS
 2. The requesting entity generates a list of installed web extensions and the Account IDs that the extensions manage
 3. The User selects the desired web extension/Account pair which they want to perform the transaction.
 4. If the web extension does not already list the requesting entity as a connected application, the requesting entity sends a ConnectApplication RPC to the chosen extension.
 
 Transaction Transfer Protocol
-Refer to HIP-xx Hedera Signing Protocol for the list of RPC's.
-1. The requesting entity prepares the appropriate RPC message as defined in HIP-xx Hedera Signing Protocol.
-2. The requesting entity sends the RPC to the selected web extension. 
-3. The web extension receives the RPC and displays the information to the user, with the option to Approve or Reject the request.
-4. The web extension processes the RPC appropriately and provides a return value to the requesting entity.
+1. The requesting entity prepares the appropriate JSON-structured messages definied below.
+2. The requesting entity sends the message to the selected web extension. 
+3. The web extension receives the message and displays the information to the user, with the option to Approve or Reject the request.
+4. The web extension processes the message appropriately and provides a return value to the requesting entity.
 
 _End of Protocol Scope_
 
@@ -79,7 +78,7 @@ Clients that implement the protocol will contain a 'HederaWPS' identifier in the
 
 An empty list signifies that there are no compatible browser extensions. It is then up to the Requesting Website if they want to provide options/instructions to the user. 
 
-**Step 2**: The Requesting Website sends the RPC "requestAccounts" to the web extensions which implement HederaWETP.
+**Step 2**: The Requesting Website sends the message "requestAccounts" to the web extensions which implement HederaWPS.
 
 Each Client implements RequestAccounts() which returns a set of Hedera Account IDs. They can either return the request automatically (since account ID's are typically not sensitive information), or the application can display a prompt to the user asking to release the accountIDs to the requesting application.
 
@@ -133,6 +132,114 @@ message ConnectApplicationResponse{
 **Transaction Transfer Notes:**
 
 The Transaction Transfer Protocol occurs every time the web application wants to send a transaction to the receiving application. By necessity it can only occur once a web application has been selected from the Client Query Flow.
+
+**Json Structures**
+
+We prepose protobufs for four RPC calls and their corresponding requests and responses. The four calls are RequestLimit, Sign, Submit, and SubmitAndSign.
+
+RequestLimit allows for information like MaxTransactionFee and PreAuthorizationLimit to be requested from entities.
+
+This call can be used to query entities for their capabilities, to filter out entities which do not have the appropriate account permissions/settings or implement the required functions of the requesting entity. It can also potentially be used as a pre-authorization mechanism, for example a site that may prompt the user "This site wants to spend up to $50, is that OK?", and the wallet can then approve transactions up to that limit without interrupting the user.
+
+Sign sends an unsigned transaction to an entity. The entity signs the transaction and returns the SigMap like that used in the hedera API to bytes of a transaction.
+
+This call allows the requesting entity to generate a transaction, have it signed by the appropriate entity, then process and eventually execute the transaction on the HAPI. This gives the requesting entity control over the transaction and allows functionality such as multi-sig transactions to be fulfilled by the requesting entity.
+
+Submit sends a transaction to an entity to submit to the HAPI. Any required signatures are included in the message.
+
+This call allows for an entity to send a signed transaction to another entity for that entity to execute. The receiving entity returns the response from HAPI to the requesting entity.
+
+SignAndSubmit sends a transaction to an entity, which is expected to sign the transaction and execute it on HAPI.
+
+This is a streamlined call which reduces the number of messages sent between entities. The receiving entity returns the response from HAPI to the requesting entity.
+
+message ResponseCode {
+    uint64 id = 1
+    oneof Response {
+        Success = 0;
+        Rejected = 1;
+        UnrecognizedTransaction = 2;
+        MaxTransactionFeeExceeded = 3;
+        PreAuthroizationLimitExceeded = 4;
+        CapabilityNotSupported = 5;
+        TransactionException = 6;
+        }
+    Response response = 2;
+}
+
+message SignaturePair {
+    bytes pubKeyPrefix = 1; // First few bytes of the public key
+    oneof signature {
+        bytes contract = 2; // smart contract virtual signature (always length zero)
+        bytes ed25519 = 3; // ed25519 signature
+        bytes RSA_3072 = 4; //RSA-3072 signature
+        bytes ECDSA_384 = 5; //ECDSA p-384 signature
+    }
+}
+message SignatureMap {
+    repeated SignaturePair sigPair = 1; // Each signature pair corresponds to a unique Key required to sign the transaction.
+}
+
+message LimitsRequest{
+    uint64 maxTransactionFee  = 1;
+    uint64 preAuthorizationLimit = 2;
+    bytes memo = 3;
+}
+
+message LimitResponse{
+    ResponseCode response = 1;
+    uint64 maxTransactionFee = 2;
+    uint64 preAuthorizationLimit = 3;
+    bytes memo = 5;
+}
+
+message SignRequest {
+    bytes hash = 1; // correlation ID if not rpc
+    bytes bodyBytes = 2; // hex
+    bytes memo = 3;
+}
+
+message SignResponse {
+    bytes hash = 1;
+    ResponseCode response = 2;
+    SignatureMap sigMap = 3; //matches HAPI sigMap , examples is above
+    bytes memo = 4;
+}
+
+message SignAndSubmitRequest {
+    bytes hash = 1;
+    bytes bodyBytes = 2;
+    SignatureMap sigMap = 3;
+    bytes memo = 4;
+}
+message SignAndSubmitResponse { // for optimization over the wire --> less req res
+    bytes hash = 1;
+    ResponseCode response = 2;
+    TransactionReceipt receipt = 3; // from HAPI
+    bytes memo = 4;
+}
+
+message SubmitRequest {
+    bytes hash = 1;
+    bytes bodyBytes = 2;
+    SignatureMap sigMap = 3;
+    bytes memo = 4;
+}
+
+message SubmitResponse {
+    bytes hash = 1;
+    ResponseCode response = 2;
+    TransactionReceipt receipt = 3; // from HAPI
+    bytes memo = 4;
+}
+
+service Exchange {
+    //unary
+    rpc requestLimit(LimitsRequest) returns (limitResponse);
+    rpc sign(signRequest) returns (signResponse); // returns transaction signed with ECDSA
+    rpc submit(SubmitRequest) returns (SubmitResponse);
+    rpc sign_and_submit(SignAndSubmitRequest) returns (SignAndSubmitResponse);
+}
 
 ## Backwards Compatibility
 
