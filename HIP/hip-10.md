@@ -369,7 +369,7 @@ For more info see here: https://json-schema.org/
                     “description”: “Mime type of the resource.”
                 }
                 “metadata”: {
-                    “type”: “string”,
+                    “type”: “object”,
                     “description”: “metadata for the file, following this standard”
                 }
         },
