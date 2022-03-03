@@ -49,8 +49,8 @@ Below is the human-readable schema, presented to maximize clarity. This document
     "name": "token Name - REQUIRED",
     "creator": "artist",
     "creatorDID": "DID URI",
-    "description": "human readable description of the asset - REQUIRED ",
-    "image": "cid or path to the NFT, or if non-image, optional preview image - CONDITIONALLY OPTIONAL",
+    "description": "human readable description of the asset - RECOMMENDED",
+    "image": "cid or path to the NFT, or if non-image, optional preview image - RECOMMENDED",
     "type": "mime type - ie image/jpeg - CONDITIONALLY OPTIONAL ",
     "files": [ // object array that contains uri, type and metadata
     {
@@ -72,10 +72,9 @@ Below is the human-readable schema, presented to maximize clarity. This document
 ```
 ### Required, Optional and Conditionally Optional fields:
 
-Name and description are two out of three of the basic fields in ERC721 NFT standards. These are **required** for all NFT’s.
+Name, description and image are the three basic fields in ERC721 NFT standards. Name is **required** for all NFT’s. Description and image are optional, but recommended to enable apps to display them better.
 
-Image and Type are listed as *Conditionally Optional*. If Image is defined, then type **must** be defined as well. *Conditionally Optional* means these two fields are considered required unless the following condition is met:
-At least one item is defined in “files”
+Type is listed as *Conditionally Optional*. If Image is defined, then type **must** be defined as well.
 
 Creator, creator DID, attributes, files, properties and localization are optional and do not need to be included in the metadata.
 
@@ -122,8 +121,8 @@ Including the mime type allows applications to properly handle the file and grea
 “files” is an array of objects with the following format:
 ```
     {
-		“uri”: “uri to file”,
-		“type”: “mime type”,
+        “uri”: “uri to file”,
+        “type”: “mime type”,
         “metadata”: “metadata URI”
     }
 ```
@@ -260,12 +259,19 @@ An example similar to the above one. Format “none” is used to indicate that 
         {
             “uri”: “ipfs://bawlkjaklfjoiaefklankfldanmfoieiajfl”,
             “type”: “video/mp4”,
-            “metadata”: “ipfs://bakcjlajeioajflakdjfneafoaeinovandklf”
+            “metadata”: {
+                "name": "Example Video"
+            }
         },
         {
             “uri”: “ipfs://bawlkjaklfjoiaefklankfldanmfoieiajfl”,
             “type”: “application/pdf”,
-            “metadata”: “ipfs://bakcjlajeioajflakdjfneafoaeinovandklf”
+            “metadata”: {
+                "name": "Example second file",
+                "description": "The description is recommended but optional. The image provided is an optional preview",
+                "image": "ipfs://bawlkjaklfjoiaefklankflda1313ieiajfl",
+                "type": "image/jpeg"
+            }
         }
     ],
     "localization": [
@@ -364,7 +370,7 @@ For more info see here: https://json-schema.org/
                 }
                 “metadata”: {
                     “type”: “string”,
-                    “description”: “A URI pointing to the metadata json file for this file”
+                    “description”: “metadata for the file, following this standard”
                 }
         },
         "format": {
@@ -389,7 +395,7 @@ For more info see here: https://json-schema.org/
                 }
         },            
     },
-    “required”: [ “name”, “description” ]
+    “required”: [ “name” ]
 }
 ```
 
