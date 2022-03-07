@@ -50,7 +50,7 @@ Below is the human-readable schema, presented to maximize clarity. This document
     "creator": "artist",
     "creatorDID": "DID URI",
     "description": "human readable description of the asset - RECOMMENDED",
-    "image": "cid or path to the NFT, or if non-image, optional preview image - RECOMMENDED",
+    "image": "cid or path to the NFT's image file, or for non-image NFTs, optional preview image - RECOMMENDED",
     "type": "mime type - ie image/jpeg - CONDITIONALLY OPTIONAL ",
     "files": [ // object array that contains uri, type and metadata
     {
@@ -413,7 +413,7 @@ HTS implementations use this standard to provide additional metadata for their t
 
 Wallet and token explorer implementations interrogate HTS tokens using this standard to display additional metadata for tokens.
 
-Note that the referenced URI must fit within the token memo size restrictions.
+Note that the referenced URI must fit within the token metadata size restrictions.
 
 ## Rejected Ideas
 
